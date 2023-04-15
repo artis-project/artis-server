@@ -1,3 +1,7 @@
+- Link for cleanup policy https://cloud.google.com/artifact-registry/docs/repositories/cleanup-policy?hl=de
+- Link for guide https://cloud.google.com/run/docs/quickstarts/deploy-continuously?hl=de
+
+
 # Cloud Run Template Microservice
 
 A template repository for a Cloud Run microservice, written in Python
