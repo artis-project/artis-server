@@ -47,7 +47,6 @@ def trace_modifier(
     """
     # Only attempt to get the context if in a request
     if request:
-
         trace_header = request.headers.get("X-Cloud-Trace-Context")
         # Only append the trace if it exists in the request
         if trace_header:
