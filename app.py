@@ -1,4 +1,3 @@
-import binascii
 import os
 import signal
 import sys
@@ -9,7 +8,7 @@ from flask import Flask, g, request
 
 from src.models.Artwork import Artwork
 from src.smartcontracts.DefaultArtwork import DefaultArtwork
-from utils.authentication import verify_signature
+from utils.authentication import auth_required
 from utils.error_handlers import register_error_handlers
 from utils.logging import logger
 
@@ -23,36 +22,28 @@ sc = DefaultArtwork(
 )
 
 
-### MIDDLEWARE ###
-@app.before_request
-def authenticate():
-    signature = request.headers.get("signature")
-    did = request.headers.get("did")
-
-    sender = verify_signature(did=did, signature=signature, smartcontract=sc)
-    g.sender = binascii.unhexlify(sender[2:])
-
-    logger.info(sender=sender)
-
-
 ### ROUTES ###
 @app.route("/")
+@auth_required(sc)
 def hello() -> str:
     return "Hello from Artis-Project!"
 
 
 @app.get("/artworks/<int:artwork_id>")
+@auth_required(sc)
 def get(artwork_id: str) -> str:
     return sc.getArtworkData(artwork_id, g.sender).dump()
 
 
 @app.patch("/artworks/<int:artwork_id>")
+@auth_required(sc)
 def update(artwork_id: int) -> str:
     newArtworkData = Artwork.load(request.get_json() | {"id": artwork_id})
     return sc.updateArtworkData(newArtworkData, g.sender).dump()
 
 
 @app.post("/artworks")
+@auth_required(sc)
 def mint() -> str:
     return {"tokenId": sc.safeMint(to=g.sender)}
 
