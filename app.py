@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from flask import Flask, g, request
 
 from src.models.Artwork import Artwork
+from src.openapispec import openApiSpecConfig
 from src.smartcontracts.DefaultArtwork import DefaultArtwork
 from utils.authentication import auth_required
 from utils.error_handlers import register_error_handlers
@@ -26,12 +27,55 @@ sc = DefaultArtwork(
 @app.route("/")
 @auth_required(sc)
 def hello() -> str:
+    """Home Route
+    ---
+    get:
+      description: Home route of artis project
+      security:
+        - DID: []
+        - Signature: []
+      responses:
+        default:
+            description: This is the default response
+            content:
+                text/plain:
+                    type: string
+                    example: Hello from Artis-Project!
+    """
+    print(request.headers)
     return "Hello from Artis-Project!"
 
 
 @app.get("/artworks/<int:artwork_id>")
 @auth_required(sc)
 def get(artwork_id: str) -> str:
+    """Home Route
+    ---
+    get:
+        tags:
+        - Artwork
+        summary: Get Artwork Data by Id
+        description: Retrieves the data of a specific artwork by its id
+        parameters:
+        - name: artwork_id
+          in: path
+          description: id of the artwork
+          required: true
+          schema:
+            type: integer
+        security:
+            - DID: []
+            - Signature: []
+        responses:
+            200:
+                content:
+                    application/json:
+                        schema: ArtworkSchema
+            400:
+                content:
+                    application/json:
+                        schema: ErrorSchema
+    """
     return sc.getArtworkData(artwork_id, g.sender).dump()
 
 
@@ -63,9 +107,26 @@ def shutdown_handler(signal_int: int, frame: FrameType) -> None:
     sys.exit(0)
 
 
-if __name__ == "__main__":
-    # Running application locally, outside of a Google Cloud Environment
+### OpenApiSpec ###
+spec, swaggerui_blueprint = openApiSpecConfig()
 
+
+@app.route("/swagger")
+def specification() -> str:
+    return spec.to_yaml()
+
+
+app.register_blueprint(swaggerui_blueprint)
+
+with app.app_context():
+    spec.path(view=hello)
+    spec.path(view=get)
+    spec.path(view=update)
+    spec.path(view=mint)
+
+
+# Running application locally, outside of a Google Cloud Environment
+if __name__ == "__main__":
     # handles Ctrl-C termination
     signal.signal(signal.SIGINT, shutdown_handler)
 

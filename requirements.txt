@@ -10,3 +10,5 @@ py-solc-x==1.1.1
 web3==6.2.0
 python-dotenv==1.0.0
 marshmallow==3.19.0
+apispec==6.3.0
+apispec-webframeworks==0.5.2
