@@ -24,9 +24,7 @@ def werkzeug_errors(error: HTTPException):
 
 def register_error_handlers(app: Flask):
     ### Werkzeug errors ###
-    app.register_error_handler(NotFound, werkzeug_errors)
-    app.register_error_handler(Unauthorized, werkzeug_errors)
-    app.register_error_handler(MethodNotAllowed, werkzeug_errors)
+    app.register_error_handler(HTTPException, werkzeug_errors)
     ### other errors ###
     app.register_error_handler(ValidationError, validation_error)
     app.register_error_handler(ContractLogicError, contract_logic_error)
