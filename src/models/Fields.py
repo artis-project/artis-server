@@ -1,26 +1,20 @@
-import binascii
-
 from marshmallow import ValidationError, fields
 
 
-class Address(fields.Field):
+class Address(fields.String):
     @staticmethod
     def _serialize(value, attr, obj, **kwargs):
-        if value is None:
-            return ""
-        return "0x" + binascii.hexlify(value).decode("utf-8")
-
-    @staticmethod
-    def _deserialize(value, attr, data, **kwargs):
         if value == "0x0000000000000000000000000000000000000000":
             return None
-        return binascii.unhexlify(value[2:])
+        return value
 
     @staticmethod
     def _validate(value):
+        if value is None:
+            return
         messages = []
         if not isinstance(value, str):
-            messages.append("Address must be a string")
+            messages.append(f"Address must be a string not {type(value)}")
         elif not value.startswith("0x"):
             messages.append("Addresses must start with 0x")
         elif not (length := len(value)) == 42:
@@ -32,7 +26,7 @@ class Address(fields.Field):
             raise ValidationError(messages)
 
 
-class DID(fields.Field):
+class DID(fields.String):
     @staticmethod
     def _validate(value):
         """Check if the did is of the format did:ethr:<0xwallet_address>"""
@@ -51,7 +45,7 @@ class DID(fields.Field):
             )
 
 
-class Signature(fields.Field):
+class Signature(fields.String):
     @staticmethod
     def _validate(value):
         """Check if the signature is valid."""
