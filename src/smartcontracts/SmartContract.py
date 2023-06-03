@@ -3,7 +3,6 @@ from web3 import Web3
 from web3.contract import Contract
 from web3.middleware import construct_sign_and_send_raw_middleware
 
-
 class SmartContract(ABC):
     def __init__(self, signing_private_key: str, http_provider_url: str):
         self._w3 = Web3(Web3.HTTPProvider(http_provider_url))

@@ -8,7 +8,7 @@ from flask import Flask, g, request
 
 from src.models.Artwork import Artwork
 from src.smartcontracts.DefaultArtwork import DefaultArtwork
-from utils.authentication import auth_required
+from utils.authentication import auth_required, issue_token
 from utils.error_handlers import register_error_handlers
 from utils.logging import logger
 
@@ -27,6 +27,15 @@ sc = DefaultArtwork(
 @auth_required(sc)
 def hello() -> str:
     return "Hello from Artis-Project!"
+
+
+@app.post("/auth")
+def token() -> str:
+    data = request.get_json()
+    private_key = data.get("private_key")
+
+    did, token = issue_token(private_key)
+    return {"did": did, "token": token}
 
 
 @app.get("/artworks/<int:artwork_id>")
