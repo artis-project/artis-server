@@ -17,7 +17,7 @@ load_dotenv()
 app = Flask(__name__)
 app.app_context()
 sc = DefaultArtwork(
-    signing_private_key=os.environ.get("DEFAULT_PRIVATE_KEY"),
+    signing_private_key=os.environ.get("SMARTCONTRACT_ADMIN_PRIVATE_KEY"),
     http_provider_url=os.environ.get("HTTP_PROVIDER_URL"),
 )
 

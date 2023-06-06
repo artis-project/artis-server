@@ -58,6 +58,9 @@ def issue_token(private_key: str):
 
 def verify_token(token: str) -> str:
     """verify a jwt token and return the did of the user"""
+    if token is None:
+        raise Unauthorized("missing token")
+
     token = token.replace("Bearer ", "")
     try:
         _, payload, signature = token.split(".")
