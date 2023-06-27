@@ -24,19 +24,20 @@ class DefaultArtwork(SmartContract):
             new_admin
         ).transact()
 
-    def safeMint(self, to: bytes) -> int:
+    def safeMint(self, to: bytes, data: Artwork) -> int:
         """Invoking safeMint function of smartcontract"""
-        tx_hash = self._contract.functions.safeMint(to).transact()
+        owner, mint_data = data.to_sc_mint()
+        tx_hash = self._contract.functions.safeMint(to if not owner else owner, mint_data).transact()
         event_args = self._handleEvent(tx_hash, "Transfer")
         return event_args.get("tokenId")
 
     def updateArtworkData(self, newArtworkData: Artwork, sender: bytes) -> Artwork:
         """Invoking updateArtworkData function of smartcontract"""
         tx_hash = self._contract.functions.updateArtworkData(
-            newArtworkData.toSC(), sender
+            newArtworkData.to_sc_update(), sender
         ).transact()
         event_args = self._handleEvent(tx_hash, "Updated")
-        return Artwork.load(event_args.get("newData"))
+        return Artwork.load(event_args.get("newData") | {"owner": event_args.get("owner")})
 
     def verifySignature(self, did: str, signature: bytes) -> bool:
         """Invoking verifySignature function of smartcontract"""

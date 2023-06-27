@@ -54,7 +54,8 @@ def update(artwork_id: int) -> str:
 @app.post("/artworks")
 @auth_required(sc)
 def mint() -> str:
-    return {"tokenId": sc.safeMint(to=g.sender)}
+    artworkData = Artwork.load_from_mint(request.get_json())
+    return {"tokenId": sc.safeMint(to=g.sender, data=artworkData)}
 
 
 ### HANDLERS ###
