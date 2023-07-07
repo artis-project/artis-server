@@ -1,7 +1,7 @@
 from flask import Flask
 from marshmallow import ValidationError
 from web3.exceptions import ContractLogicError
-from werkzeug.exceptions import HTTPException, MethodNotAllowed, NotFound, Unauthorized
+from werkzeug.exceptions import HTTPException
 
 
 def validation_error(error: ValidationError):
@@ -9,10 +9,11 @@ def validation_error(error: ValidationError):
 
 
 def contract_logic_error(error: ContractLogicError):
-    if error.args[0] == "Token does not exist":
-        return {"error": error.__class__.__name__, "messages": error.args}, 404
-    else:
-        return {"error": error.__class__.__name__, "messages": error.args}, 403
+    # contract reverts with the appropriate status code as the last three characters of the error message
+    status_code = (
+        lambda: int(error.args[0][-3:]) if error.args[0][-3:].isdigit() else 400
+    )
+    return {"error": error.__class__.__name__, "messages": error.args}, status_code()
 
 
 def werkzeug_errors(error: HTTPException):
@@ -26,5 +27,5 @@ def register_error_handlers(app: Flask):
     ### Werkzeug errors ###
     app.register_error_handler(HTTPException, werkzeug_errors)
     ### other errors ###
-    app.register_error_handler(ValidationError, validation_error)
-    app.register_error_handler(ContractLogicError, contract_logic_error)
+    # app.register_error_handler(ValidationError, validation_error)
+    # app.register_error_handler(ContractLogicError, contract_logic_error)

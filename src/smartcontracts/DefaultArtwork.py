@@ -5,7 +5,7 @@ import requests
 from hexbytes import HexBytes
 
 from src.models.Artwork import Artwork
-from src.models.Schemas import ArtworkSchema
+from src.models.Fields import Address
 from src.smartcontracts.SmartContract import SmartContract
 
 
@@ -19,7 +19,7 @@ class DefaultArtwork(SmartContract):
 
     @smartcontractAdmin.setter
     def smartcontractAdmin(self, new_admin: str) -> None:
-        ArtworkSchema.validate_address(new_admin)
+        Address._validate(new_admin)
         tx_hash = self._contract.functions.changeSmartContractAdmin(
             new_admin
         ).transact()
@@ -27,7 +27,9 @@ class DefaultArtwork(SmartContract):
     def safeMint(self, to: bytes, data: Artwork) -> int:
         """Invoking safeMint function of smartcontract"""
         owner, mint_data = data.to_sc_mint()
-        tx_hash = self._contract.functions.safeMint(to if not owner else owner, mint_data).transact()
+        tx_hash = self._contract.functions.safeMint(
+            to if not owner else owner, mint_data
+        ).transact()
         event_args = self._handleEvent(tx_hash, "Transfer")
         return event_args.get("tokenId")
 
@@ -35,9 +37,12 @@ class DefaultArtwork(SmartContract):
         """Invoking updateArtworkData function of smartcontract"""
         tx_hash = self._contract.functions.updateArtworkData(
             newArtworkData.to_sc_update(), sender
-        ).transact()
+        ).transact() 
         event_args = self._handleEvent(tx_hash, "Updated")
-        return Artwork.load(event_args.get("newData") | {"owner": event_args.get("owner")})
+        new_data = event_args.get("newData")
+        new_data = dict(new_data, **{"owner": event_args.get("owner")})
+        new_data["status"] = dict(new_data["status"], **{"approvals": event_args.get("approvals")})
+        return Artwork.load(data=new_data)
 
     def verifySignature(self, did: str, signature: bytes) -> bool:
         """Invoking verifySignature function of smartcontract"""

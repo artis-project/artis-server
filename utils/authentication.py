@@ -2,6 +2,7 @@ import base64
 import binascii
 import datetime
 import json
+import os
 from functools import wraps
 
 from eth_abi.abi import encode
@@ -43,11 +44,10 @@ def issue_token(private_key: str):
     base64_payload = encode_dict_base64(payload)
 
     signature_data = f"{base64_header}.{base64_payload}"
-
+    print(signature_data)
     encoded = encode(["string"], [signature_data])
     hashed = Web3.keccak(encoded)
-    signature = subject.signHash(hashed).signature.hex()
-    print(type(signature))
+    print("HERE", hashed.hex())
     signature = base64.b64encode(
         subject.signHash(hashed).signature.hex().encode("utf-8")
     ).decode("utf-8")
@@ -98,7 +98,7 @@ def verify_token(token: str) -> str:
     return did
 
 
-def auth_required(sc: SmartContract):
+def auth_required():
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
