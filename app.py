@@ -33,15 +33,6 @@ def hello() -> str:
     return "Hello from Artis-Project!"
 
 
-@app.post("/auth")
-def token() -> dict:
-    data = request.get_json()
-    private_key = data.get("private_key")
-
-    did, token = issue_token(private_key)
-    return {"did": did, "token": token}
-
-
 @app.post("/auth/payload")
 def payload() -> dict:
     data = request.get_json()
