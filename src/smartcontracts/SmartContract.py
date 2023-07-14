@@ -3,6 +3,7 @@ from web3 import Web3, middleware
 from web3.contract import Contract
 from web3.gas_strategies.time_based import medium_gas_price_strategy
 
+
 class SmartContract(ABC):
     def __init__(self, signing_private_key: str, http_provider_url: str):
         self._w3 = Web3(Web3.HTTPProvider(http_provider_url))
@@ -37,8 +38,4 @@ class SmartContract(ABC):
 
     @abstractmethod
     def _getSmartContractAbi(self, sc_address: str) -> str:
-        pass
-
-    @abstractmethod
-    def verifySignature(self, did: str, signature: bytes) -> bool:
         pass

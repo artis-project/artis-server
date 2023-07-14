@@ -9,8 +9,7 @@ from flask_cors import CORS
 
 from src.models.Artwork import Artwork
 from src.smartcontracts.DefaultArtwork import DefaultArtwork
-from utils.authentication import auth_required, issue_token
-from utils.authenticator import Authenticator, auth_required2
+from utils.authenticator import Authenticator, auth_required
 from utils.error_handlers import register_error_handlers
 from utils.logging import logger
 import datetime
@@ -18,17 +17,18 @@ import datetime
 ### SETUP ###
 load_dotenv()
 app = Flask(__name__)
+app.json.sort_keys = False
 cors = CORS(app, supports_credentials=True)
-app.app_context()
 sc = DefaultArtwork(
     signing_private_key=os.environ.get("SMARTCONTRACT_ADMIN_PRIVATE_KEY"),
-    http_provider_url=os.environ.get("HTTP_PROVIDER_URL"), 
+    http_provider_url=os.environ.get("HTTP_PROVIDER_URL"),
 )
 authenticator = Authenticator(os.environ.get("SMARTCONTRACT_ADMIN_PRIVATE_KEY"))
 
+
 ### ROUTES ###
 @app.route("/")
-@auth_required()
+@auth_required(authenticator)
 def hello() -> str:
     return "Hello from Artis-Project!"
 
@@ -41,43 +41,53 @@ def token() -> dict:
     did, token = issue_token(private_key)
     return {"did": did, "token": token}
 
-""" @app.post("/auth/payload")
+
+@app.post("/auth/payload")
 def payload() -> dict:
     data = request.get_json()
-    return authenticator.generate_client_auth_payload(data.get("address"), data.get("chainId"))
+    return authenticator.generate_client_auth_payload(
+        data.get("address"), data.get("chainId")
+    )
+
 
 @app.post("/auth/login")
 def login() -> dict:
     data = request.get_json().get("payload")
-    return {"token": authenticator.generate_auth_token("artis-project", data)} """
+    return {"token": authenticator.generate_auth_token("artis-project", data)}
+
 
 @app.post("/auth/logout")
 def logout() -> dict:
     g.sender = None
     return ("", 204)
 
+
 @app.get("/auth/user")
-#@auth_required2(authenticator)
 def user() -> str | dict:
-    return {"address": "g.sender"} if "g.sender" else "null"
-    
+    return authenticator.user("artis-project", request.headers.get("Authorization"))
 
 
 @app.get("/artworks/<int:artwork_id>")
-@auth_required()
+@auth_required(authenticator)
 def get(artwork_id: int) -> dict:
     return sc.getArtworkData(artwork_id, g.sender).dump()
 
 
 @app.patch("/artworks/<int:artwork_id>")
-@auth_required()
+@auth_required(authenticator)
 def update(artwork_id: int) -> dict:
     newArtworkData = Artwork.load(request.get_json() | {"id": artwork_id})
     return sc.updateArtworkData(newArtworkData, g.sender).dump()
 
 
+@app.get("/artworks")
+@auth_required(authenticator)
+def get_all() -> dict:
+    return {"artworks": sc.getArtworkIdsByAddress(g.sender)}
+
+
 @app.post("/artworks")
-@auth_required()
+@auth_required(authenticator)
 def mint() -> dict:
     artworkData = Artwork.load_from_mint(request.get_json())
     return {"tokenId": sc.safeMint(to=g.sender, data=artworkData)}
@@ -102,9 +112,9 @@ if __name__ == "__main__":
     # Running application locally, outside of a Google Cloud Environment
 
     # handles Ctrl-C termination
-    signal.signal(signal.SIGINT, shutdown_handler) # type: ignore
+    signal.signal(signal.SIGINT, shutdown_handler)  # type: ignore
 
     app.run(host="localhost", port=8080, debug=True, load_dotenv=True)
 else:
     # handles Cloud Run container termination
-    signal.signal(signal.SIGTERM, shutdown_handler) # type: ignore
+    signal.signal(signal.SIGTERM, shutdown_handler)  # type: ignore

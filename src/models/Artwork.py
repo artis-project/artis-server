@@ -1,4 +1,4 @@
-from src.models.Schemas import ArtworkSchema, ArtworkMintSchema, ArtworkUpdateSchema
+from src.models.Schemas import ArtworkSchema, ArtworkMintSchema
 
 INITIAL_ADDRESS = "0x0000000000000000000000000000000000000000"
 NO_CHANGE_ADDRESS = "0x0000000000000000000000000000000000000001"
@@ -33,10 +33,6 @@ class Artwork:
     def load_from_mint(cls, data: dict):
         return cls(**ArtworkMintSchema().load(data))
 
-    @classmethod
-    def load_from_update(cls, data: dict):
-        return cls(**ArtworkUpdateSchema().load(data))
-
     def dump(self) -> dict:
         return ArtworkSchema().dump(self.__dict__)
 
@@ -48,10 +44,7 @@ class Artwork:
             "carrier": self.carrier if self.carrier else INITIAL_ADDRESS,
             "logger": self.logger if self.logger else INITIAL_ADDRESS,
             "recipient": self.recipient if self.recipient else INITIAL_ADDRESS,
-            "status": {
-                "currentStatus": "MINTED",
-                "requestedStatus": "None"
-            },
+            "status": {"currentStatus": "MINTED", "requestedStatus": "None"},
             "violationTimestamp": 0,
         }
 
@@ -65,7 +58,7 @@ class Artwork:
             "logger": self.logger if self.logger else NO_CHANGE_ADDRESS,
             "status": {
                 "currentStatus": self.status.get("currentStatus", ""),
-                "requestedStatus": self.status.get("requestedStatus", "")
+                "requestedStatus": self.status.get("requestedStatus", ""),
             },
             "violationTimestamp": self.violationTimestamp
             if self.violationTimestamp

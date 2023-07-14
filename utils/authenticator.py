@@ -33,6 +33,16 @@ class Authenticator:
         self.timeformat = timeformat
         self.signing_account = Account.from_key(signing_key)
 
+    def user(self, domain: str, token: str) -> dict | str:
+        """
+        checks if token is valid and returns the user address if invalid returns "null"
+        method for auth/user route used in authentication flow
+        """
+        try:
+            return {"address": self.authenticate(domain, token)}
+        except Exception as e:
+            return "null"
+
     def generate_client_auth_payload(self, address: str, chain_id: str):
         return {
             "payload": {
@@ -66,7 +76,7 @@ class Authenticator:
 
         # Check that the intended domain matches the domain of the payload
         if payload.payload.domain != domain:
-            raise Exception(
+            raise Unauthorized(
                 f"Expected domain '{domain}' does not match domain on payload '{payload.payload.domain}'"
             )
 
@@ -75,24 +85,22 @@ class Authenticator:
         if current_time.replace(
             tzinfo=pytz.utc
         ) > payload.payload.expiration_time.replace(tzinfo=pytz.utc):
-            raise Exception(f"Login request has expired")
+            raise Unauthorized(f"Login request has expired")
 
         # If chain ID is specified, check that it matches the chain ID of the signature
         if (
             options.chain_id is not None
             and options.chain_id != payload.payload.chain_id
         ):
-            raise Exception(
+            raise Unauthorized(
                 f"Chain ID '{options.chain_id}' does not match payload chain ID '{payload.payload.chain_id}'"
             )
 
         # Check that the signing address is the claimed wallet address
         message = self._generate_message(payload.payload)
-        print(message)
         user_address = self._recover_address(message, payload.signature)
-        print(user_address)
         if user_address.lower() != payload.payload.address.lower():
-            raise Exception(
+            raise Unauthorized(
                 f"The intended payload address '{payload.payload.address.lower()}' is not the payload signer"
             )
 
@@ -168,7 +176,6 @@ class Authenticator:
         except ValueError:
             raise Unauthorized("invalid token format")
 
-        print("TOKEN", token)
         token = token.replace("Bearer ", "")
         encoded_payload = token.split(".")[1]
         encoded_signature = token.split(".")[2]
@@ -254,7 +261,6 @@ class Authenticator:
 
         message_hash = encode_defunct(text=message)
         sig = self.signing_account.sign_message(message_hash)
-        print(sig.signature.hex())
         return sig.signature.hex()
 
     @staticmethod
@@ -285,7 +291,7 @@ class Authenticator:
         return base64.b64decode(message).decode("utf-8")
 
 
-def auth_required2(authenticator: Authenticator):
+def auth_required(authenticator: Authenticator):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

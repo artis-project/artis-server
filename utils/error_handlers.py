@@ -2,6 +2,7 @@ from flask import Flask
 from marshmallow import ValidationError
 from web3.exceptions import ContractLogicError
 from werkzeug.exceptions import HTTPException
+from web3.exceptions import TimeExhausted
 
 
 def validation_error(error: ValidationError):
@@ -16,6 +17,10 @@ def contract_logic_error(error: ContractLogicError):
     return {"error": error.__class__.__name__, "messages": error.args}, status_code()
 
 
+def time_exhausted_error(error: TimeExhausted):
+    return {"error": error.__class__.__name__, "messages": error.args}, 408
+
+
 def werkzeug_errors(error: HTTPException):
     return {
         "error": error.__class__.__name__,
@@ -27,5 +32,6 @@ def register_error_handlers(app: Flask):
     ### Werkzeug errors ###
     app.register_error_handler(HTTPException, werkzeug_errors)
     ### other errors ###
-    # app.register_error_handler(ValidationError, validation_error)
-    # app.register_error_handler(ContractLogicError, contract_logic_error)
+    app.register_error_handler(ValidationError, validation_error)
+    app.register_error_handler(ContractLogicError, contract_logic_error)
+    app.register_error_handler(TimeExhausted, time_exhausted_error)
