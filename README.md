@@ -1,187 +1,154 @@
-- Link for cleanup policy https://cloud.google.com/artifact-registry/docs/repositories/cleanup-policy?hl=de
-- Link for guide https://cloud.google.com/run/docs/quickstarts/deploy-continuously?hl=de
+# artis-server
 
+The artis-project/artis-server repository is a python flask api that provides a REST api to a deployed smart contract. This application is designed to be hosted on google cloud as a cloud run service.
 
-# Cloud Run Template Microservice
+## Prerequisites
 
-A template repository for a Cloud Run microservice, written in Python
+- google cloud account
+- [gcloud cli installed](https://cloud.google.com/sdk/docs/install) & authenticated
+- [github cli installed](https://cli.github.com/) & authenticated
 
-[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
+## External services setup
 
-## Prerequisite
+### Ethereum managed fullnode
 
-* Enable the Cloud Run API via the [console](https://console.cloud.google.com/apis/library/run.googleapis.com?_ga=2.124941642.1555267850.1615248624-203055525.1615245957) or CLI:
+[alchemy](https://www.alchemy.com/) is a web3 development platform that offers managed services such as an ethereum fullnode. For this project we are using this service and have followed the following steps:
+
+- Sign up and create a new app
+- copy the provider-url for later (https://eth-sepolia.g.alchemy.com/v2/<api-key>)
+
+### Metamask accounts & wallets
+
+[metamask](https://metamask.io/) is a web3 wallet provider that simplifies blockchain wallet and account creation. For this project we need multiple accounts that are easily created with metamask.
+
+- Sign up for metamask
+- create accounts for
+    - the smartcontract admin
+    - the logger
+- note the private key for later
+
+### Etherscan
+
+[etherscan](https://etherscan.io/apis) is an ethereum block explorer that provides an api that this project is using to dynamically access the abi of the deployed artis-smartcontract.
+
+- create an etherscan account
+- note the api-key for later
+
+### Github Variables
+
+Because the services in this project are intertwined we use github variables at an organization level to share two pieces of information. Firstly the address of the deployed smartcontract that is consumed by the *artis-server* to interact with the newest deployed contract and secondly the API url of the deployed *artis-server* instance that is consumed by the *artis-rockpi-logger* in order to query the newest version of the deployed REST API.
+
+To create or update these variables manually:
 
 ```bash
-gcloud services enable run.googleapis.com
+gh variable set ARTIS_API_URL --org artis-project
+gh variable set ARTIS_SC_ADDRESS --org artis-project
 ```
 
-## Features
+In our CI/CD setup these variables are updated (automatically) and queried by each service independently. In order to authenticate we are using personal access tokens:
 
-* **Flask**: Web server framework
-* **Buildpack support** Tooling to build production-ready container images from source code and without a Dockerfile
-* **Dockerfile**: Container build instructions, if needed to replace buildpack for custom build
-* **SIGTERM handler**: Catch termination signal for cleanup before Cloud Run stops the container
-* **Service metadata**: Access service metadata, project ID and region, at runtime
-* **Local development utilities**: Auto-restart with changes and prettify logs
-* **Structured logging w/ Log Correlation** JSON formatted logger, parsable by Cloud Logging, with [automatic correlation of container logs to a request log](https://cloud.google.com/run/docs/logging#correlate-logs).
-* **Unit and System tests**: Basic unit and system tests setup for the microservice
-* **Task definition and execution**: Uses [invoke](http://www.pyinvoke.org/) to execute defined tasks in `tasks.py`.
+- create a fine-grained personal access token to allow reading and writing to variables (if you want you can seperate read and write into two tokens)
+    - to allow personal access tokens: artis-project > settings > Third-party Access > Personal access tokens > Allow access via fine-grained access tokens > do not require administrator approval > Allow access via personal access tokens (classic) > enroll
+        - or ask an administrator to do this for you
+    - to create: <your github account> > settings > Developer settings > Personal access tokens > Fine-grained tokens > generate new token
+        - name: ACCESS_ARTIS_ORG_VARIABLES
+        - Resource owner: artis-project
+        - Permissions > Organizations permissions > Variables > Read and write
+        - generate token and note for later
+
+## Dependencies
+
+All dependencies are defined in the requirements.txt file. To install them run
+
+```bash
+python -m venv .venv
+source ./.venv/bin/activate
+pip install -r requirements.txt
+```
 
 ## Local Development
 
-### Cloud Code
-
-This template works with [Cloud Code](https://cloud.google.com/code), an IDE extension
-to let you rapidly iterate, debug, and run code on Kubernetes and Cloud Run.
-
-Learn how to use Cloud Code for:
-
-* Local development - [VSCode](https://cloud.google.com/code/docs/vscode/developing-a-cloud-run-service), [IntelliJ](https://cloud.google.com/code/docs/intellij/developing-a-cloud-run-service)
-
-* Local debugging - [VSCode](https://cloud.google.com/code/docs/vscode/debugging-a-cloud-run-service), [IntelliJ](https://cloud.google.com/code/docs/intellij/debugging-a-cloud-run-service)
-
-* Deploying a Cloud Run service - [VSCode](https://cloud.google.com/code/docs/vscode/deploying-a-cloud-run-service), [IntelliJ](https://cloud.google.com/code/docs/intellij/deploying-a-cloud-run-service)
-* Creating a new application from a custom template (`.template/templates.json` allows for use as an app template) - [VSCode](https://cloud.google.com/code/docs/vscode/create-app-from-custom-template), [IntelliJ](https://cloud.google.com/code/docs/intellij/create-app-from-custom-template)
-
-### CLI tooling
-
-To run the `invoke` commands below, install [`invoke`](https://www.pyinvoke.org/index.html) system wide: 
+The flask service can be run locally with the command:
 
 ```bash
-pip install invoke
+source ./.venv/bin/activate
+python app.py
 ```
 
-Invoke will handle establishing local virtual environments, etc. Task definitions can be found in `tasks.py`.
+If you run the service locally you need to set some environment variables in a .env file:
 
-#### Local development
+`.env`
+---
+SMARTCONTRACT_ADMIN_PRIVATE_KEY = \<smartcontract-admin-private-key\>
 
-1. Set Project Id:
-    ```bash
-    export GOOGLE_CLOUD_PROJECT=<GCP_PROJECT_ID>
-    ```
-2. Start the server with hot reload:
-    ```bash
-    invoke dev
-    ```
+HTTP_PROVIDER_URL = \<fullnode-rpc-endpoint\>
 
-#### Deploying a Cloud Run service
+ETHERSCAN_API_KEY = \<etherscan-api-key\>
 
-1. Set Project Id:
-    ```bash
-    export GOOGLE_CLOUD_PROJECT=<GCP_PROJECT_ID>
-    ```
+GITHUB_VARIABLES_ACCESS_TOKEN = \<personal access token to read org variables\>
 
-1. Enable the Artifact Registry API:
-    ```bash
-    gcloud services enable artifactregistry.googleapis.com
-    ```
+CHAIN_ID = “11155111”
 
-1. Create an Artifact Registry repo:
-    ```bash
-    export REPOSITORY="samples"
-    export REGION=us-central1
-    gcloud artifacts repositories create $REPOSITORY --location $REGION --repository-format "docker"
-    ```
-  
-1. Use the gcloud credential helper to authorize Docker to push to your Artifact Registry:
-    ```bash
-    gcloud auth configure-docker
-    ```
+GITHUB_ORG_NAME = “artis-project”
 
-2. Build the container using a buildpack:
-    ```bash
-    invoke build
-    ```
-3. Deploy to Cloud Run:
-    ```bash
-    invoke deploy
-    ```
+GITHUB_SC_ADDRESS_VARIABLE_NAME = “ARTIS_SC_ADDRESS”
 
-### Run sample tests
+---
+## Deployment
 
-1. [Pass credentials via `GOOGLE_APPLICATION_CREDENTIALS` env var](https://cloud.google.com/docs/authentication/production#passing_variable):
-    ```bash
-    export GOOGLE_APPLICATION_CREDENTIALS="[PATH]"
-    ```
+- for this we should create a new project in google cloud after (creation you need to [enable billing](https://cloud.google.com/billing/docs/how-to/modify-project?hl=de))
 
-2. Set Project Id:
-    ```bash
-    export GOOGLE_CLOUD_PROJECT=<GCP_PROJECT_ID>
-    ```
-3. Run unit tests
-    ```bash
-    invoke test
-    ```
+```bash
+gcloud projects create my-artis-project --name="artis project" --set-as-default
+```
 
-4. Run system tests
-    ```bash
-    gcloud builds submit \
-        --config test/advance.cloudbuild.yaml \
-        --substitutions 'COMMIT_SHA=manual,REPO_NAME=manual'
-    ```
-    The Cloud Build configuration file will build and deploy the containerized service
-    to Cloud Run, run tests managed by pytest, then clean up testing resources. This configuration restricts public
-    access to the test service. Therefore, service accounts need to have the permission to issue ID tokens for request authorization:
-    * Enable Cloud Run, Cloud Build, Artifact Registry, and IAM APIs:
-        ```bash
-        gcloud services enable run.googleapis.com cloudbuild.googleapis.com iamcredentials.googleapis.com artifactregistry.googleapis.com
-        ```
-        
-    * Set environment variables.
-        ```bash
-        export PROJECT_ID="$(gcloud config get-value project)"
-        export PROJECT_NUMBER="$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')"
-        ```
+- next we need to allow the necessary apis
 
-    * Create an Artifact Registry repo (or use another already created repo):
-        ```bash
-        export REPOSITORY="samples"
-        export REGION=us-central1
-        gcloud artifacts repositories create $REPOSITORY --location $REGION --repository-format "docker"
-        ```
-  
-    * Create service account `token-creator` with `Service Account Token Creator` and `Cloud Run Invoker` roles.
-        ```bash
-        gcloud iam service-accounts create token-creator
+```bash
+gcloud services enable \
+	run.googleapis.com \
+	artifactregistry.googleapis.com \
+	secretmanager.googleapis.com \
+	cloudbuild.googleapis.com
+```
 
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-            --member="serviceAccount:token-creator@$PROJECT_ID.iam.gserviceaccount.com" \
-            --role="roles/iam.serviceAccountTokenCreator"
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-            --member="serviceAccount:token-creator@$PROJECT_ID.iam.gserviceaccount.com" \
-            --role="roles/run.invoker"
-        ```
-
-    * Add `Service Account Token Creator` role to the Cloud Build service account.
-        ```bash
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-            --member="serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
-            --role="roles/iam.serviceAccountTokenCreator"
-        ```
+- add secretsmanager permissions to the default service account
     
-    * Cloud Build also requires permission to deploy Cloud Run services and administer artifacts: 
+    ```bash
+     copy email of default service account
+    gcloud iam service-accounts list
+    gcloud projects add-iam-policy-binding my-artis-project --member serviceAccount:\<email\> --role=roles/secretmanager.secretAccessor
+    ```
+    
+- create secrets that are being consumed by the service. for each \<name\> replace \<value\> with the secret and execute the command below.
+    - \<name\> ⇒ alchemy-provider-url
+    - \<name\> ⇒  smartcontract-admin-private-key (must be prefixed with 0x)
+    - \<name\> ⇒ github-variables-access-token
+    - \<name\> ⇒ etherscan-api-key
 
-        ```bash
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-            --member="serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
-            --role="roles/run.admin"
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-            --member="serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
-            --role="roles/iam.serviceAccountUser"
-        gcloud projects add-iam-policy-binding $PROJECT_ID \
-            --member="serviceAccount:$PROJECT_NUMBER@cloudbuild.gserviceaccount.com" \
-            --role="roles/artifactregistry.repoAdmin"
-        ```
+```bash
+ create secrets for Private Key and Github token
+printf "<value>" | gcloud secrets create <name> --data-file=-
+```
 
-## Maintenance & Support
+- at this point we are ready to deploy the service. To customize the deploy command reference the [gcloud docs](https://cloud.google.com/sdk/gcloud/reference/run/deploy)
 
-This repo performs basic periodic testing for maintenance. Please use the issue tracker for bug reports, features requests and submitting pull requests.
+```bash
+gcloud run deploy artis-api \
+	--source . \
+	--set-env-vars=CHAIN_ID=11155111,GITHUB_ORG_NAME=my-artis-project,GITHUB_SC_ADDRESS_VARIABLE_NAME=ARTIS_SC_ADDRESS \
+	--set-secrets=SMARTCONTRACT_ADMIN_PRIVATE_KEY=smartcontract-admin-private-key:latest,HTTP_PROVIDER_URL=alchemy-provider-url:latest,ETHERSCAN_API_KEY=etherscan-api-key:latest,GITHUB_VARIABLES_ACCESS_TOKEN=github-variables-access-token:latest \
+	--max-instances=3
+```
 
-## Contributions
+- when the command has successfully completed, copy the http url of the cloud service and set the github variable to this url (is used by the logger)
 
-Please see the [contributing guidelines](CONTRIBUTING.md)
+```bash
+gh variable set ARTIS_API_URL --org my-artis-project
+```
 
-## License
+- If you want you can add continuous deployment to this service on the google cloud console you can check out this resource [gcloud docs](https://cloud.google.com/run/docs/quickstarts/deploy-continuously?hl=de)
 
-This library is licensed under Apache 2.0. Full license text is available in [LICENSE](LICENSE).
+
+## Learn More
+If you want to know more about the project check out the full project report in the [artis-thesis](https://github.com/artis-project/artis-thesis) repository

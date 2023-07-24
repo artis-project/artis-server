@@ -25,7 +25,7 @@ from typing import List
 
 from invoke import task
 
-venv = "source ./venv/bin/activate"
+venv = "source ./.venv/bin/activate"
 GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
 REGION = os.environ.get("REGION", "us-central1")
 
@@ -42,7 +42,7 @@ def require_project(c):  # noqa: ANN001, ANN201
 def require_venv(c, test_requirements=False, quiet=True):  # noqa: ANN001, ANN201
     """(Check) Require that virtualenv is setup, requirements installed"""
 
-    c.run("python -m venv venv")
+    c.run("python3.10 -m venv .venv")
     quiet_param = " -q" if quiet else ""
 
     with c.prefix(venv):
@@ -84,7 +84,7 @@ def lint(c):  # noqa: ANN001, ANN201
     with c.prefix(venv):
         local_names = _determine_local_import_names(".")
         c.run(
-            "flake8 --exclude venv "
+            "flake8 --exclude .venv "
             "--max-line-length=88 "
             "--import-order-style=google "
             f"--application-import-names {','.join(local_names)} "
@@ -111,26 +111,27 @@ def _determine_local_import_names(start_dir: str) -> List[str]:
 def fix(c):  # noqa: ANN001, ANN201
     """Apply linting fixes"""
     with c.prefix(venv):
-        c.run("black *.py **/*.py --force-exclude venv")
+        c.run("black *.py **/*.py --force-exclude .venv")
         c.run("isort --profile google *.py **/*.py")
 
-
-@task(pre=[require_project])
-def build(c):  # noqa: ANN001, ANN201
-    """Build the service into a container image"""
+@task
+def createSecret(c, name, value):
+    if name is None or value is None:
+        print("Usage: invoke create_secrets --name=<secret-name> --value=<secret-value>")
+        sys.exit(1)
     c.run(
-        f"gcloud builds submit --pack "
-        f"image={REGION}-docker.pkg.dev/{GOOGLE_CLOUD_PROJECT}/samples/microservice-template:manual"
+        f"printf \"{value}\" | gcloud secrets create {name} --data-file=-"
     )
 
-
-@task(pre=[require_project])
+@task
 def deploy(c):  # noqa: ANN001, ANN201
     """Deploy the container into Cloud Run (fully managed)"""
     c.run(
-        "gcloud run deploy microservice-template "
-        f"--image {REGION}-docker.pkg.dev/{GOOGLE_CLOUD_PROJECT}/samples/microservice-template:manual "
-        f"--platform managed --region {REGION}"
+        "gcloud run deploy artis-api "
+        f"--source . "
+        f"--set-env-vars=CHAIN_ID=11155111,GITHUB_ORG_NAME=my-artis-project,GITHUB_SC_ADDRESS_VARIABLE_NAME=ARTIS_SC_ADDRESS"
+        f"--set-secrets=SMARTCONTRACT_ADMIN_PRIVATE_KEY=smartcontract-admin-private-key:latest,HTTP_PROVIDER_URL=alchemy-provider-url:latest,ETHERSCAN_API_KEY=etherscan-api-key:latest,GITHUB_VARIABLES_ACCESS_TOKEN=github-variables-access-token:latest"
+        f"--max-instances=3"
     )
 
 
