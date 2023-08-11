@@ -10,10 +10,10 @@ class SmartcontractConnector(ABC):
         self._w3 = Web3(Web3.HTTPProvider(http_provider_url))
         default_account = self._w3.eth.account.from_key(signing_private_key)
 
-        def gas_strategy(web3, transaction_params=None):
-            return Web3.to_wei(1000, "gwei")
+        def aggressive_gas_strategy(web3, transaction_params=None):
+            return Web3.to_wei(30, "gwei")
 
-        self._w3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
+        self._w3.eth.set_gas_price_strategy(aggressive_gas_strategy)
 
         self._w3.eth.default_account = default_account.address
         self._w3.middleware_onion.add(

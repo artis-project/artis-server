@@ -27,7 +27,7 @@ from invoke import task
 
 venv = "source ./.venv/bin/activate"
 GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT")
-REGION = os.environ.get("REGION", "us-central1")
+REGION = os.environ.get("REGION", "europe-west1")
 
 
 @task
@@ -132,6 +132,7 @@ def deploy(c):  # noqa: ANN001, ANN201
         f"--set-env-vars=CHAIN_ID=11155111,GITHUB_ORG_NAME=my-artis-project,GITHUB_SC_ADDRESS_VARIABLE_NAME=ARTIS_SC_ADDRESS"
         f"--set-secrets=SMARTCONTRACT_ADMIN_PRIVATE_KEY=smartcontract-admin-private-key:latest,HTTP_PROVIDER_URL=alchemy-provider-url:latest,ETHERSCAN_API_KEY=etherscan-api-key:latest,GITHUB_VARIABLES_ACCESS_TOKEN=github-variables-access-token:latest"
         f"--max-instances=3"
+        f"--region {REGION}"
     )
 
 
