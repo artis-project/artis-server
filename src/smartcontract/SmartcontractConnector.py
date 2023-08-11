@@ -1,14 +1,19 @@
 from abc import ABC, abstractmethod
+
 from web3 import Web3, middleware
 from web3.contract import Contract
-from web3.gas_strategies.time_based import medium_gas_price_strategy
+from web3.gas_strategies.rpc import rpc_gas_price_strategy
 
 
-class SmartContract(ABC):
+class SmartcontractConnector(ABC):
     def __init__(self, signing_private_key: str, http_provider_url: str):
         self._w3 = Web3(Web3.HTTPProvider(http_provider_url))
         default_account = self._w3.eth.account.from_key(signing_private_key)
-        self._w3.eth.set_gas_price_strategy(medium_gas_price_strategy)
+
+        def gas_strategy(web3, transaction_params=None):
+            return Web3.to_wei(1000, "gwei")
+
+        self._w3.eth.set_gas_price_strategy(rpc_gas_price_strategy)
 
         self._w3.eth.default_account = default_account.address
         self._w3.middleware_onion.add(

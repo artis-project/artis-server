@@ -6,10 +6,10 @@ from hexbytes import HexBytes
 
 from src.models.Artwork import Artwork
 from src.models.Fields import Address
-from src.smartcontracts.SmartContract import SmartContract
+from src.smartcontract.SmartcontractConnector import SmartcontractConnector
 
 
-class DefaultArtwork(SmartContract):
+class ArtworkConnector(SmartcontractConnector):
     def __init__(self, signing_private_key: str, http_provider_url: str):
         super().__init__(signing_private_key, http_provider_url)
 
@@ -37,7 +37,7 @@ class DefaultArtwork(SmartContract):
         """Invoking updateArtworkData function of smartcontract"""
         tx_hash = self._contract.functions.updateArtworkData(
             newArtworkData.to_sc_update(), sender
-        ).transact()
+        ).transact(transaction={})
         event_args = self._handleEvent(tx_hash, "Updated")
         new_data = event_args.get("newData")
         new_data = dict(new_data, **{"owner": event_args.get("owner")})

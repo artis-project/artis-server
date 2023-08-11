@@ -7,19 +7,18 @@ from dotenv import load_dotenv
 from flask import Flask, g, request
 from flask_cors import CORS
 
+from src.authentication.Authenticator import Authenticator, auth_required
 from src.models.Artwork import Artwork
-from src.smartcontracts.DefaultArtwork import DefaultArtwork
-from utils.authenticator import Authenticator, auth_required
+from src.smartcontract.ArtworkConnector import ArtworkConnector
 from utils.error_handlers import register_error_handlers
 from utils.logging import logger
-import datetime
 
 ### SETUP ###
 load_dotenv()
 app = Flask(__name__)
 app.json.sort_keys = False
 cors = CORS(app, supports_credentials=True)
-sc = DefaultArtwork(
+sc = ArtworkConnector(
     signing_private_key=os.environ.get("SMARTCONTRACT_ADMIN_PRIVATE_KEY"),
     http_provider_url=os.environ.get("HTTP_PROVIDER_URL"),
 )

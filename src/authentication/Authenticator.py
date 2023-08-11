@@ -1,24 +1,21 @@
 import base64
-from web3.eth.base_eth import Account
-from eth_account.messages import encode_defunct
-from dataclasses import dataclass
+import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, cast
-from utils.auth_types import (
-    LoginOptions,
+from functools import wraps
+from typing import Any
+from uuid import uuid4
+
+import pytz
+from src.authentication.auth_types import (
+    AuthenticationPayloadData,
     LoginPayload,
     LoginPayloadData,
     VerifyOptions,
-    AuthenticationOptions,
-    AuthenticationPayloadData,
 )
-from uuid import uuid4
-import pytz
-import json
-from functools import wraps
+from eth_account.messages import encode_defunct
 from flask import g, request
-import binascii
-from werkzeug.exceptions import BadRequest, Unauthorized
+from web3.eth.base_eth import Account
+from werkzeug.exceptions import Unauthorized
 
 
 class Authenticator:
